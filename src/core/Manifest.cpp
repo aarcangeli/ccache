@@ -360,16 +360,6 @@ Manifest::result_matches(
       return false;
     }
 
-    // Clang stores the mtime of the included files in the precompiled header,
-    // and will error out if that header is later used without rebuilding.
-    if ((ctx.config.compiler_type() == CompilerType::clang
-         || ctx.config.compiler_type() == CompilerType::other)
-        && ctx.args_info.output_is_precompiled_header
-        && !ctx.args_info.fno_pch_timestamp && fi.mtime != fs.mtime) {
-      LOG("Precompiled header includes {}, which has a new mtime", path);
-      return false;
-    }
-
     if (ctx.config.sloppiness().is_enabled(core::Sloppy::file_stat_matches)) {
       if (!(ctx.config.sloppiness().is_enabled(
             core::Sloppy::file_stat_matches_ctime))) {
