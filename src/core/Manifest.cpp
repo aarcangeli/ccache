@@ -128,6 +128,7 @@ Manifest::look_up_result_digest(const Context& ctx) const
   // Check newest result first since it's a more likely to match.
   for (size_t i = m_results.size(); i > 0; i--) {
     const auto& result = m_results[i - 1];
+    LOG("Looking in result {}", result.key.to_string());
     if (result_matches(ctx, result, stated_files, hashed_files)) {
       return result.key;
     }
@@ -343,6 +344,7 @@ Manifest::result_matches(
     if (stated_files_iter == stated_files.end()) {
       auto file_stat = Stat::stat(path, Stat::OnError::log);
       if (!file_stat) {
+        LOG("Cannot retrieve stats of {}", path);
         return false;
       }
       FileStats st;
@@ -354,6 +356,7 @@ Manifest::result_matches(
     const FileStats& fs = stated_files_iter->second;
 
     if (fi.fsize != fs.size) {
+      LOG("File '{}' has been modified (size changed)", path);
       return false;
     }
 
@@ -402,6 +405,7 @@ Manifest::result_matches(
     }
 
     if (fi.digest != hashed_files_iter->second) {
+      LOG("File '{}' has been modified (content changed)", path);
       return false;
     }
   }
