@@ -66,6 +66,7 @@
 
 #include <fcntl.h>
 
+#include <iostream>
 #include <optional>
 #include <string_view>
 
@@ -988,6 +989,7 @@ to_cache(Context& ctx,
          const Args& depend_extra_args,
          Hash* depend_mode_hash)
 {
+  size_t old_args_size = args.size();
   if (ctx.config.is_compiler_group_msvc()) {
     args.push_back(fmt::format("-Fo{}", ctx.args_info.output_obj));
   } else {
@@ -1005,6 +1007,13 @@ to_cache(Context& ctx,
   if (ctx.args_info.generating_diagnostics) {
     args.push_back("--serialize-diagnostics");
     args.push_back(ctx.args_info.output_dia);
+  }
+
+  if (ctx.config.is_compiler_group_clang()) {
+    // specify that clang has to check file content while loading ast file
+    // if generating a pch, clang writes the content hash inside ast file
+    args.push_back("-Xclang");
+    args.push_back("-fvalidate-ast-input-files-content");
   }
 
   if (ctx.args_info.seen_double_dash) {
@@ -1047,6 +1056,7 @@ to_cache(Context& ctx,
     ctx.time_of_compilation = time(nullptr);
     result = do_execute(ctx, depend_mode_args);
   }
+  args.pop_back(args.size() - old_args_size);
   MTR_END("execute", "compiler");
 
   if (!result) {
@@ -1157,6 +1167,12 @@ get_result_key_from_cpp(Context& ctx, Args& args, Hash& hash)
 
     if (ctx.config.keep_comments_cpp()) {
       args.push_back("-C");
+    }
+
+    if (ctx.config.is_compiler_group_clang()) {
+      // specify that clang has to check file content while loading ast file
+      args.push_back("-Xclang");
+      args.push_back("-fvalidate-ast-input-files-content");
     }
 
     // Send preprocessor output to a file instead of stdout to work around
