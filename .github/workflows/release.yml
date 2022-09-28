@@ -9,6 +9,10 @@ env:
   NINJA_VERSION: 1.10.2
   BUILD_TYPE: Release
 
+concurrency:
+  group: release-${{ github.workflow }}
+  cancel-in-progress: true
+
 jobs:
   dump_contexts_to_log:
     runs-on: ubuntu-latest
@@ -31,6 +35,16 @@ jobs:
     runs-on: ubuntu-22.04
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
+      # Remove old release drafts by using the curl request for the available releases with draft flag
+      - name: Remove Old Release Drafts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/{owner}/{repo}/releases \
+            --jq '.[] | select(.draft == true) | .id' \
+            | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
+
+      # Create a new release draft
       - run:
           gh release create "v${{ github.run_number }}"
           --repo ${{ github.repository }}
@@ -185,6 +199,7 @@ jobs:
       - run: |
           gh release view "v${{ github.run_number }}" --repo ${{ github.repository }} --json body --jq ".body" > notes.txt
           sed -i '/Workflow in progress/d' ./notes.txt
+          echo "" >> notes.txt
           echo "✅ Workflow completed https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> notes.txt
           gh release edit "v${{ github.run_number }}" --repo ${{ github.repository }} --notes-file notes.txt
           # Publish release
