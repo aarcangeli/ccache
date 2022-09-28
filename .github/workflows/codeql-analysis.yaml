@@ -17,6 +17,10 @@ on:
     # Full scan once a week
     - cron: '0 14 * * 3'
 
+concurrency:
+  group: lock-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
